@@ -156,17 +156,17 @@ class HookScriptTests(unittest.TestCase):
             self.assertNotIn("STATUSLINE SETUP NEEDED", result.stdout)
             self.assertEqual((claude_dir / ".caveman-active").read_text(), "full")
 
-    def test_config_subagent_only_is_valid_mode(self):
-        """subagent-only must be in VALID_MODES so env var + config file accept it."""
+    def test_config_subagent_is_valid_mode(self):
+        """subagent must be in VALID_MODES so env var + config file accept it."""
         env = os.environ.copy()
-        env["CAVEMAN_DEFAULT_MODE"] = "subagent-only"
+        env["CAVEMAN_DEFAULT_MODE"] = "subagent"
         with tempfile.TemporaryDirectory() as tmp:
             home = Path(tmp)
             (home / ".claude").mkdir()
             (home / ".claude" / "settings.json").write_text("{}\n")
             env["HOME"] = str(home)
             # caveman-activate.js writes flag file only for known modes.
-            # subagent-only is handled specially so it won't write "subagent-only"
+            # subagent is handled specially so it won't write "subagent"
             # to flag — but the script must not exit with an error.
             result = subprocess.run(
                 ["node", "hooks/caveman-activate.js"],
@@ -180,7 +180,7 @@ class HookScriptTests(unittest.TestCase):
     def test_config_subagent_intensity_env_override(self):
         """CAVEMAN_SUBAGENT_INTENSITY env var sets intensity for subagent sessions."""
         env = os.environ.copy()
-        env["CAVEMAN_DEFAULT_MODE"] = "subagent-only"
+        env["CAVEMAN_DEFAULT_MODE"] = "subagent"
         env["CAVEMAN_SUBAGENT_INTENSITY"] = "ultra"
         env["CAVEMAN_FORCE_SUBAGENT"] = "1"
         with tempfile.TemporaryDirectory() as tmp:
@@ -203,7 +203,7 @@ class HookScriptTests(unittest.TestCase):
     def test_config_subagent_intensity_default_is_full(self):
         """When subagentIntensity not set, default is full."""
         env = os.environ.copy()
-        env["CAVEMAN_DEFAULT_MODE"] = "subagent-only"
+        env["CAVEMAN_DEFAULT_MODE"] = "subagent"
         env.pop("CAVEMAN_SUBAGENT_INTENSITY", None)
         env["CAVEMAN_FORCE_SUBAGENT"] = "1"
         with tempfile.TemporaryDirectory() as tmp:
@@ -225,7 +225,7 @@ class HookScriptTests(unittest.TestCase):
     def test_issubagent_forced_true(self):
         """CAVEMAN_FORCE_SUBAGENT=1 makes isSubagent() return true (test seam)."""
         env = os.environ.copy()
-        env["CAVEMAN_DEFAULT_MODE"] = "subagent-only"
+        env["CAVEMAN_DEFAULT_MODE"] = "subagent"
         env["CAVEMAN_FORCE_SUBAGENT"] = "1"
         with tempfile.TemporaryDirectory() as tmp:
             home = Path(tmp)
@@ -248,7 +248,7 @@ class HookScriptTests(unittest.TestCase):
     def test_issubagent_forced_false(self):
         """CAVEMAN_FORCE_SUBAGENT=0 makes isSubagent() return false (main session path)."""
         env = os.environ.copy()
-        env["CAVEMAN_DEFAULT_MODE"] = "subagent-only"
+        env["CAVEMAN_DEFAULT_MODE"] = "subagent"
         env["CAVEMAN_FORCE_SUBAGENT"] = "0"
         with tempfile.TemporaryDirectory() as tmp:
             home = Path(tmp)
@@ -273,7 +273,7 @@ class HookScriptTests(unittest.TestCase):
     def test_subagent_session_activates_caveman(self):
         """Subagent session: flag written, caveman rules emitted in stdout."""
         env = os.environ.copy()
-        env["CAVEMAN_DEFAULT_MODE"] = "subagent-only"
+        env["CAVEMAN_DEFAULT_MODE"] = "subagent"
         env["CAVEMAN_FORCE_SUBAGENT"] = "1"
         env.pop("CAVEMAN_SUBAGENT_INTENSITY", None)
         with tempfile.TemporaryDirectory() as tmp:
@@ -299,7 +299,7 @@ class HookScriptTests(unittest.TestCase):
     def test_main_session_emits_agent_rules_not_caveman(self):
         """Main session: no flag file, caveman-agents rules in stdout, no full caveman."""
         env = os.environ.copy()
-        env["CAVEMAN_DEFAULT_MODE"] = "subagent-only"
+        env["CAVEMAN_DEFAULT_MODE"] = "subagent"
         env["CAVEMAN_FORCE_SUBAGENT"] = "0"
         with tempfile.TemporaryDirectory() as tmp:
             home = Path(tmp)
@@ -325,7 +325,7 @@ class HookScriptTests(unittest.TestCase):
     def test_subagent_ultra_intensity(self):
         """CAVEMAN_SUBAGENT_INTENSITY=ultra writes ultra to flag in subagent session."""
         env = os.environ.copy()
-        env["CAVEMAN_DEFAULT_MODE"] = "subagent-only"
+        env["CAVEMAN_DEFAULT_MODE"] = "subagent"
         env["CAVEMAN_FORCE_SUBAGENT"] = "1"
         env["CAVEMAN_SUBAGENT_INTENSITY"] = "ultra"
         with tempfile.TemporaryDirectory() as tmp:

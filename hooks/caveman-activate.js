@@ -42,8 +42,8 @@ if (mode === 'off') {
   process.exit(0);
 }
 
-// subagent-only mode: behaviour splits on session type
-if (mode === 'subagent-only') {
+// subagent mode: behaviour splits on session type
+if (mode === 'subagent') {
   if (isSubagent()) {
     // ── Subagent session: activate caveman at configured intensity ──
     const intensity = getSubagentIntensity();

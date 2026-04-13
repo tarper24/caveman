@@ -17,7 +17,7 @@ const VALID_MODES = [
   'off', 'lite', 'full', 'ultra',
   'wenyan-lite', 'wenyan', 'wenyan-full', 'wenyan-ultra',
   'commit', 'review', 'compress',
-  'subagent-only'
+  'subagent'
 ];
 
 const VALID_INTENSITIES = ['lite', 'full', 'ultra'];
