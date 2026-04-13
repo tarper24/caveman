@@ -42,6 +42,68 @@ if (mode === 'off') {
   process.exit(0);
 }
 
+// subagent-only mode: behaviour splits on session type
+if (mode === 'subagent-only') {
+  if (isSubagent()) {
+    // ── Subagent session: activate caveman at configured intensity ──
+    const intensity = getSubagentIntensity();
+    try {
+      fs.mkdirSync(path.dirname(flagPath), { recursive: true });
+      fs.writeFileSync(flagPath, 'subagent-' + intensity);
+    } catch (e) {}
+
+    // Read caveman SKILL.md — same runtime-read pattern as existing logic
+    let skillContent = '';
+    try {
+      skillContent = fs.readFileSync(
+        path.join(__dirname, '..', 'skills', 'caveman', 'SKILL.md'), 'utf8'
+      );
+    } catch (e) {}
+
+    const intensityLabel = intensity;
+    let output;
+    if (skillContent) {
+      const body = skillContent.replace(/^---[\s\S]*?---\s*/, '');
+      const filtered = body.split('\n').reduce((acc, line) => {
+        const tableRowMatch = line.match(/^\|\s*\*\*(\S+?)\*\*\s*\|/);
+        if (tableRowMatch) {
+          if (tableRowMatch[1] === intensityLabel) acc.push(line);
+          return acc;
+        }
+        const exampleMatch = line.match(/^- (\S+?):\s/);
+        if (exampleMatch) {
+          if (exampleMatch[1] === intensityLabel) acc.push(line);
+          return acc;
+        }
+        acc.push(line);
+        return acc;
+      }, []);
+      output = 'CAVEMAN MODE ACTIVE — level: ' + intensityLabel + '\n\n' + filtered.join('\n');
+    } else {
+      output = 'CAVEMAN MODE ACTIVE — level: ' + intensityLabel + '\n\n' +
+        'Respond terse like smart caveman. All technical substance stay. Only fluff die.';
+    }
+    process.stdout.write(output);
+    process.exit(0);
+  } else {
+    // ── Main session: emit caveman-agents rules as hidden context ──
+    let agentSkill = '';
+    try {
+      agentSkill = fs.readFileSync(
+        path.join(__dirname, '..', 'skills', 'caveman-agents', 'SKILL.md'), 'utf8'
+      );
+    } catch (e) {}
+
+    const agentRules = agentSkill
+      ? agentSkill.replace(/^---[\s\S]*?---\s*/, '')
+      : 'Write terse when talking TO agents via Agent tool or SendMessage. ' +
+        'No pleasantries, no hedging, task-only fragments. User-facing responses unaffected.';
+
+    process.stdout.write('CAVEMAN AGENTS MODE ACTIVE\n\n' + agentRules);
+    process.exit(0);
+  }
+}
+
 // 1. Write flag file
 try {
   fs.mkdirSync(path.dirname(flagPath), { recursive: true });
