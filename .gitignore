@@ -2,6 +2,7 @@ benchmarks/results/*.json
 __pycache__/
 *.pyc
 .venv/
+venv/
 .env.local
 caveman-compress.md
 **/.DS_Store
