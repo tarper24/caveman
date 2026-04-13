@@ -9,7 +9,25 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const { getDefaultMode } = require('./caveman-config');
+const { spawnSync } = require('child_process');
+const { getDefaultMode, getSubagentIntensity } = require('./caveman-config');
+
+function isSubagent() {
+  // Test seam: allows Python integration tests to exercise both branches
+  // without needing a Claude parent process.
+  if (process.env.CAVEMAN_FORCE_SUBAGENT === '1') return true;
+  if (process.env.CAVEMAN_FORCE_SUBAGENT === '0') return false;
+
+  try {
+    const ppid = String(process.ppid);
+    const result = process.platform === 'win32'
+      ? spawnSync('wmic', ['process', 'where', `ProcessId=${ppid}`, 'get', 'name', '/value'], { encoding: 'utf8' })
+      : spawnSync('ps', ['-p', ppid, '-o', 'comm='], { encoding: 'utf8' });
+    return result.status === 0 && /claude/i.test(result.stdout);
+  } catch (e) {
+    return false; // safe fallback — never false-activate
+  }
+}
 
 const claudeDir = path.join(os.homedir(), '.claude');
 const flagPath = path.join(claudeDir, '.caveman-active');

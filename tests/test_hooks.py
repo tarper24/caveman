@@ -222,6 +222,53 @@ class HookScriptTests(unittest.TestCase):
             flag = home / ".claude" / ".caveman-active"
             self.assertEqual(flag.read_text(), "subagent-full")
 
+    def test_issubagent_forced_true(self):
+        """CAVEMAN_FORCE_SUBAGENT=1 makes isSubagent() return true (test seam)."""
+        env = os.environ.copy()
+        env["CAVEMAN_DEFAULT_MODE"] = "subagent-only"
+        env["CAVEMAN_FORCE_SUBAGENT"] = "1"
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            (home / ".claude").mkdir()
+            (home / ".claude" / "settings.json").write_text("{}\n")
+            env["HOME"] = str(home)
+            result = subprocess.run(
+                ["node", "hooks/caveman-activate.js"],
+                cwd=REPO_ROOT,
+                env=env,
+                text=True,
+                capture_output=True,
+                check=True,
+            )
+            flag = home / ".claude" / ".caveman-active"
+            # When forced subagent, flag file must be written
+            self.assertTrue(flag.exists(), "flag file must exist in subagent session")
+            self.assertEqual(flag.read_text(), "subagent-full")
+
+    def test_issubagent_forced_false(self):
+        """CAVEMAN_FORCE_SUBAGENT=0 makes isSubagent() return false (main session path)."""
+        env = os.environ.copy()
+        env["CAVEMAN_DEFAULT_MODE"] = "subagent-only"
+        env["CAVEMAN_FORCE_SUBAGENT"] = "0"
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            (home / ".claude").mkdir()
+            (home / ".claude" / "settings.json").write_text(
+                '{"statusLine": {"type": "command", "command": "bash /tmp/fake.sh"}}\n'
+            )
+            env["HOME"] = str(home)
+            result = subprocess.run(
+                ["node", "hooks/caveman-activate.js"],
+                cwd=REPO_ROOT,
+                env=env,
+                text=True,
+                capture_output=True,
+                check=True,
+            )
+            flag = home / ".claude" / ".caveman-active"
+            # Main session must NOT write flag
+            self.assertFalse(flag.exists(), "flag file must not exist in main session")
+
 
 if __name__ == "__main__":
     unittest.main()
