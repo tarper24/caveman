@@ -9,25 +9,7 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const { spawnSync } = require('child_process');
-const { getDefaultMode, getSubagentIntensity, buildCavemanRules } = require('./caveman-config');
-
-function isSubagent() {
-  // Test seam: allows Python integration tests to exercise both branches
-  // without needing a Claude parent process.
-  if (process.env.CAVEMAN_FORCE_SUBAGENT === '1') return true;
-  if (process.env.CAVEMAN_FORCE_SUBAGENT === '0') return false;
-
-  try {
-    const ppid = String(process.ppid);
-    const result = process.platform === 'win32'
-      ? spawnSync('wmic', ['process', 'where', `ProcessId=${ppid}`, 'get', 'name', '/value'], { encoding: 'utf8' })
-      : spawnSync('ps', ['-p', ppid, '-o', 'comm='], { encoding: 'utf8' });
-    return result.status === 0 && /claude/i.test(result.stdout);
-  } catch (e) {
-    return false; // safe fallback — never false-activate
-  }
-}
+const { getDefaultMode, buildCavemanRules } = require('./caveman-config');
 
 const claudeDir = path.join(os.homedir(), '.claude');
 const flagPath = path.join(claudeDir, '.caveman-active');
@@ -42,38 +24,25 @@ if (mode === 'off') {
   process.exit(0);
 }
 
-// subagent mode: behaviour splits on session type
+// subagent mode: emit caveman-agents rules as hidden context.
+// Subagent injection is handled by the SubagentStart hook (caveman-agent-inject.js).
 if (mode === 'subagent') {
-  if (isSubagent()) {
-    // ── Subagent session: activate caveman at configured intensity ──
-    const intensity = getSubagentIntensity();
-    try {
-      fs.mkdirSync(path.dirname(flagPath), { recursive: true });
-      fs.writeFileSync(flagPath, 'subagent-' + intensity);
-    } catch (e) {}
-    // Plugin install: SubagentStart hook already injected rules via additionalContext.
-    // Standalone install: no SubagentStart hook — emit rules here as fallback.
-    if (!process.env.CLAUDE_PLUGIN_ROOT) {
-      process.stdout.write(buildCavemanRules(intensity));
-    }
-    process.exit(0);
-  } else {
-    // ── Main session: emit caveman-agents rules as hidden context ──
-    let agentSkill = '';
-    try {
-      agentSkill = fs.readFileSync(
-        path.join(__dirname, '..', 'skills', 'caveman-agents', 'SKILL.md'), 'utf8'
-      );
-    } catch (e) {}
+  // Main session: emit caveman-agents rules as hidden context.
+  // Subagent injection is handled by the SubagentStart hook (caveman-agent-inject.js).
+  let agentSkill = '';
+  try {
+    agentSkill = fs.readFileSync(
+      path.join(__dirname, '..', 'skills', 'caveman-agents', 'SKILL.md'), 'utf8'
+    );
+  } catch (e) {}
 
-    const agentRules = agentSkill
-      ? agentSkill.replace(/^---[\s\S]*?---\s*/, '')
-      : 'Write terse when talking TO agents via Agent tool or SendMessage. ' +
-        'No pleasantries, no hedging, task-only fragments. User-facing responses unaffected.';
+  const agentRules = agentSkill
+    ? agentSkill.replace(/^---[\s\S]*?---\s*/, '')
+    : 'Write terse when talking TO agents via Agent tool or SendMessage. ' +
+      'No pleasantries, no hedging, task-only fragments. User-facing responses unaffected.';
 
-    process.stdout.write('CAVEMAN AGENTS MODE ACTIVE\n\n' + agentRules);
-    process.exit(0);
-  }
+  process.stdout.write('CAVEMAN AGENTS MODE ACTIVE\n\n' + agentRules);
+  process.exit(0);
 }
 
 // 1. Write flag file

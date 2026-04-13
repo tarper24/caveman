@@ -177,130 +177,10 @@ class HookScriptTests(unittest.TestCase):
             )
             self.assertEqual(result.returncode, 0, result.stderr)
 
-    def test_config_subagent_intensity_env_override(self):
-        """CAVEMAN_SUBAGENT_INTENSITY env var sets intensity for subagent sessions."""
-        env = os.environ.copy()
-        env["CAVEMAN_DEFAULT_MODE"] = "subagent"
-        env["CAVEMAN_SUBAGENT_INTENSITY"] = "ultra"
-        env["CAVEMAN_FORCE_SUBAGENT"] = "1"
-        with tempfile.TemporaryDirectory() as tmp:
-            home = Path(tmp)
-            (home / ".claude").mkdir()
-            (home / ".claude" / "settings.json").write_text("{}\n")
-            env["HOME"] = str(home)
-            result = subprocess.run(
-                ["node", "hooks/caveman-activate.js"],
-                cwd=REPO_ROOT,
-                env=env,
-                text=True,
-                capture_output=True,
-                check=True,
-            )
-            flag = home / ".claude" / ".caveman-active"
-            self.assertTrue(flag.exists())
-            self.assertEqual(flag.read_text(), "subagent-ultra")
-
-    def test_config_subagent_intensity_default_is_full(self):
-        """When subagentIntensity not set, default is full."""
-        env = os.environ.copy()
-        env["CAVEMAN_DEFAULT_MODE"] = "subagent"
-        env.pop("CAVEMAN_SUBAGENT_INTENSITY", None)
-        env["CAVEMAN_FORCE_SUBAGENT"] = "1"
-        with tempfile.TemporaryDirectory() as tmp:
-            home = Path(tmp)
-            (home / ".claude").mkdir()
-            (home / ".claude" / "settings.json").write_text("{}\n")
-            env["HOME"] = str(home)
-            result = subprocess.run(
-                ["node", "hooks/caveman-activate.js"],
-                cwd=REPO_ROOT,
-                env=env,
-                text=True,
-                capture_output=True,
-                check=True,
-            )
-            flag = home / ".claude" / ".caveman-active"
-            self.assertEqual(flag.read_text(), "subagent-full")
-
-    def test_issubagent_forced_true(self):
-        """CAVEMAN_FORCE_SUBAGENT=1 makes isSubagent() return true (test seam)."""
-        env = os.environ.copy()
-        env["CAVEMAN_DEFAULT_MODE"] = "subagent"
-        env["CAVEMAN_FORCE_SUBAGENT"] = "1"
-        with tempfile.TemporaryDirectory() as tmp:
-            home = Path(tmp)
-            (home / ".claude").mkdir()
-            (home / ".claude" / "settings.json").write_text("{}\n")
-            env["HOME"] = str(home)
-            result = subprocess.run(
-                ["node", "hooks/caveman-activate.js"],
-                cwd=REPO_ROOT,
-                env=env,
-                text=True,
-                capture_output=True,
-                check=True,
-            )
-            flag = home / ".claude" / ".caveman-active"
-            # When forced subagent, flag file must be written
-            self.assertTrue(flag.exists(), "flag file must exist in subagent session")
-            self.assertEqual(flag.read_text(), "subagent-full")
-
-    def test_issubagent_forced_false(self):
-        """CAVEMAN_FORCE_SUBAGENT=0 makes isSubagent() return false (main session path)."""
-        env = os.environ.copy()
-        env["CAVEMAN_DEFAULT_MODE"] = "subagent"
-        env["CAVEMAN_FORCE_SUBAGENT"] = "0"
-        with tempfile.TemporaryDirectory() as tmp:
-            home = Path(tmp)
-            (home / ".claude").mkdir()
-            (home / ".claude" / "settings.json").write_text(
-                '{"statusLine": {"type": "command", "command": "bash /tmp/fake.sh"}}\n'
-            )
-            env["HOME"] = str(home)
-            result = subprocess.run(
-                ["node", "hooks/caveman-activate.js"],
-                cwd=REPO_ROOT,
-                env=env,
-                text=True,
-                capture_output=True,
-                check=True,
-            )
-            flag = home / ".claude" / ".caveman-active"
-            # Main session must NOT write flag
-            self.assertFalse(flag.exists(), "flag file must not exist in main session")
-
-
-    def test_subagent_session_activates_caveman(self):
-        """Subagent session: flag written, caveman rules emitted in stdout."""
-        env = os.environ.copy()
-        env["CAVEMAN_DEFAULT_MODE"] = "subagent"
-        env["CAVEMAN_FORCE_SUBAGENT"] = "1"
-        env.pop("CAVEMAN_SUBAGENT_INTENSITY", None)
-        with tempfile.TemporaryDirectory() as tmp:
-            home = Path(tmp)
-            (home / ".claude").mkdir()
-            (home / ".claude" / "settings.json").write_text(
-                '{"statusLine": {"type": "command", "command": "bash /tmp/fake.sh"}}\n'
-            )
-            env["HOME"] = str(home)
-            result = subprocess.run(
-                ["node", "hooks/caveman-activate.js"],
-                cwd=REPO_ROOT,
-                env=env,
-                text=True,
-                capture_output=True,
-                check=True,
-            )
-            flag = home / ".claude" / ".caveman-active"
-            self.assertTrue(flag.exists())
-            self.assertEqual(flag.read_text(), "subagent-full")
-            self.assertIn("CAVEMAN MODE ACTIVE", result.stdout)
-
     def test_main_session_emits_agent_rules_not_caveman(self):
-        """Main session: no flag file, caveman-agents rules in stdout, no full caveman."""
+        """subagent mode: no flag file, caveman-agents rules in stdout, no full caveman."""
         env = os.environ.copy()
         env["CAVEMAN_DEFAULT_MODE"] = "subagent"
-        env["CAVEMAN_FORCE_SUBAGENT"] = "0"
         with tempfile.TemporaryDirectory() as tmp:
             home = Path(tmp)
             (home / ".claude").mkdir()
@@ -317,34 +197,10 @@ class HookScriptTests(unittest.TestCase):
                 check=True,
             )
             flag = home / ".claude" / ".caveman-active"
-            self.assertFalse(flag.exists(), "main session must not write flag")
+            self.assertFalse(flag.exists(), "subagent mode must not write flag in SessionStart")
             self.assertNotIn("CAVEMAN MODE ACTIVE", result.stdout)
             # caveman-agents rules must be present
             self.assertIn("Agent tool", result.stdout)
-
-    def test_subagent_ultra_intensity(self):
-        """CAVEMAN_SUBAGENT_INTENSITY=ultra writes ultra to flag in subagent session."""
-        env = os.environ.copy()
-        env["CAVEMAN_DEFAULT_MODE"] = "subagent"
-        env["CAVEMAN_FORCE_SUBAGENT"] = "1"
-        env["CAVEMAN_SUBAGENT_INTENSITY"] = "ultra"
-        with tempfile.TemporaryDirectory() as tmp:
-            home = Path(tmp)
-            (home / ".claude").mkdir()
-            (home / ".claude" / "settings.json").write_text(
-                '{"statusLine": {"type": "command", "command": "bash /tmp/fake.sh"}}\n'
-            )
-            env["HOME"] = str(home)
-            subprocess.run(
-                ["node", "hooks/caveman-activate.js"],
-                cwd=REPO_ROOT,
-                env=env,
-                text=True,
-                capture_output=True,
-                check=True,
-            )
-            flag = home / ".claude" / ".caveman-active"
-            self.assertEqual(flag.read_text(), "subagent-ultra")
 
     def _run_inject_hook(self, agent_type="general-purpose", extra_env=None):
         """Helper: run caveman-agent-inject.js with SubagentStart JSON on stdin."""
