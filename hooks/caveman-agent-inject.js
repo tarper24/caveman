@@ -1,10 +1,10 @@
 #!/usr/bin/env node
-// caveman — PreToolUse hook for Agent/TeamCreate prompt injection
+// caveman — SubagentStart hook for Agent/TeamCreate context injection
 //
-// Runs before Agent and TeamCreate tool calls.
-// In subagent mode: prepends caveman boot directive to the agent prompt.
-// All other modes or unrecognised schemas: silent no-op (exit 0, no stdout).
-// Never exits non-zero — must never block a tool call.
+// Fires when a subagent is spawned via Agent or TeamCreate tool.
+// In subagent mode: injects caveman boot directive into the subagent's context.
+// All other modes: silent no-op (exit 0, no stdout).
+// Never exits non-zero — must never block subagent spawning.
 
 const { getDefaultMode, getSubagentIntensity } = require('./caveman-config');
 
@@ -13,7 +13,9 @@ process.stdin.setEncoding('utf8');
 process.stdin.on('data', chunk => { stdinData += chunk; });
 process.stdin.on('end', () => {
   try {
-    const { tool_name, tool_input } = JSON.parse(stdinData);
+    // stdin carries SubagentStart metadata (agent_id, agent_type, etc.)
+    // not needed for mode-based decision — consumed to satisfy protocol
+    JSON.parse(stdinData);
 
     if (getDefaultMode() !== 'subagent') {
       process.exit(0);
@@ -21,26 +23,17 @@ process.stdin.on('end', () => {
 
     const intensity = getSubagentIntensity();
     const directive =
-      `[CAVEMAN MODE: active, level: ${intensity}. Apply caveman rules throughout. Only fluff die.]\n\n`;
+      `[CAVEMAN MODE: active, level: ${intensity}. Apply caveman rules throughout. Only fluff die.]`;
 
-    let modified = null;
-
-    if (tool_name === 'Agent' && typeof tool_input.prompt === 'string') {
-      modified = { prompt: directive + tool_input.prompt };
-    } else if (tool_name === 'TeamCreate') {
-      if (typeof tool_input.systemPrompt === 'string') {
-        modified = { systemPrompt: directive + tool_input.systemPrompt };
-      } else if (typeof tool_input.prompt === 'string') {
-        modified = { prompt: directive + tool_input.prompt };
-      }
-    }
-
-    if (modified) {
-      process.stdout.write(JSON.stringify({ decision: 'modify', parameters: modified }));
-    }
+    process.stdout.write(JSON.stringify({
+      hookSpecificOutput: {
+        hookEventName: 'SubagentStart',
+        additionalContext: directive,
+      },
+    }));
     process.exit(0);
   } catch (e) {
-    // Silent fail — never block a tool call due to hook errors
+    // Silent fail — never block subagent spawning due to hook errors
     process.exit(0);
   }
 });

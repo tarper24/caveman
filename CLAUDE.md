@@ -166,7 +166,7 @@ Rules scope: Agent tool prompts + SendMessage calls only. User-facing responses 
 | `skills/caveman-agents/SKILL.md` | Orchestrator terse-prompt rules. Hook reads at runtime. |
 | `hooks/caveman-config.js` | `subagent` in `VALID_MODES`, `subagentIntensity` resolver |
 | `hooks/caveman-activate.js` | `isSubagent()` detection, `subagent` branch |
-| `hooks/caveman-agent-inject.js` | PreToolUse hook — injects boot directive into Agent/TeamCreate prompts in `subagent` mode |
+| `hooks/caveman-agent-inject.js` | SubagentStart hook — injects boot directive into spawned subagent context in `subagent` mode |
 
 Do not duplicate rules into hook code. Hook reads SKILL.md at runtime — same pattern as existing caveman skill.
 
