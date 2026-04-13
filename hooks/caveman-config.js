@@ -81,8 +81,7 @@ function getSubagentIntensity() {
 // Reads SKILL.md, strips frontmatter, filters intensity table rows and examples
 // to only the active level, returns formatted string ready for injection.
 function buildCavemanRules(intensity) {
-  const fs = require('fs');
-  const path = require('path');
+  if (intensity === 'wenyan') intensity = 'wenyan-full';
   let skillContent = '';
   try {
     skillContent = fs.readFileSync(
