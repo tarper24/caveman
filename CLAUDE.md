@@ -123,13 +123,13 @@ Configured in `~/.claude/settings.json` under `statusLine.command`.
 
 ---
 
-## `subagent-only` mode (tarper24 fork feature)
+## `subagent` mode (tarper24 fork feature)
 
 New config mode. Caveman active in subagent sessions only. Main session stays off — full personality preserved for user-facing conversation.
 
 **Config:**
 ```json
-{ "defaultMode": "subagent-only", "subagentIntensity": "full" }
+{ "defaultMode": "subagent", "subagentIntensity": "full" }
 ```
 
 `subagentIntensity` accepts `lite`, `full`, `ultra`. Env override: `CAVEMAN_SUBAGENT_INTENSITY`.
@@ -143,7 +143,7 @@ New config mode. Caveman active in subagent sessions only. Main session stays of
 Parent name matches `/claude/i` → subagent → activate at `subagentIntensity`.
 Any error → `false` → no activation. Never false-positive.
 
-### Main session behavior (subagent-only mode)
+### Main session behavior (subagent mode)
 
 `isSubagent()` returns false → hook does NOT activate caveman. Instead emits `caveman-agents` rules as hidden SessionStart context. Orchestrating Claude writes terse Agent tool prompts and SendMessage calls — user-facing responses unaffected.
 
@@ -154,8 +154,8 @@ Any error → `false` → no activation. Never false-positive.
 ### caveman-agents skill
 
 `skills/caveman-agents/SKILL.md` — orchestrator-side terse-prompt rules. Two activation paths:
-1. Auto — emitted by SessionStart hook in main session when `subagent-only` active
-2. Manual — `/caveman-agents` to activate standalone without `subagent-only` mode
+1. Auto — emitted by SessionStart hook in main session when `subagent` active
+2. Manual — `/caveman-agents` to activate standalone without `subagent` mode
 
 Rules scope: Agent tool prompts + SendMessage calls only. User-facing responses explicitly excluded.
 
@@ -164,8 +164,9 @@ Rules scope: Agent tool prompts + SendMessage calls only. User-facing responses 
 | File | What it controls |
 |------|-----------------|
 | `skills/caveman-agents/SKILL.md` | Orchestrator terse-prompt rules. Hook reads at runtime. |
-| `hooks/caveman-config.js` | `subagent-only` in `VALID_MODES`, `subagentIntensity` resolver |
-| `hooks/caveman-activate.js` | `isSubagent()` detection, `subagent-only` branch |
+| `hooks/caveman-config.js` | `subagent` in `VALID_MODES`, `subagentIntensity` resolver |
+| `hooks/caveman-activate.js` | `isSubagent()` detection, `subagent` branch |
+| `hooks/caveman-agent-inject.js` | PreToolUse hook — injects boot directive into Agent/TeamCreate prompts in `subagent` mode |
 
 Do not duplicate rules into hook code. Hook reads SKILL.md at runtime — same pattern as existing caveman skill.
 

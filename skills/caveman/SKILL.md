@@ -55,11 +55,11 @@ Example — "Explain database connection pooling."
 
 | Mode | Effect |
 |------|--------|
-| `subagent-only` | Caveman active in subagent sessions only. Main session stays off — full personality for user. Orchestrator gets terse-prompt rules for Agent tool and SendMessage calls. |
+| `subagent` | Caveman active in subagent sessions only. Main session stays off — full personality for user. Orchestrator gets terse-prompt rules for Agent tool and SendMessage calls. Agent/TeamCreate tool calls get caveman boot directive injected automatically via PreToolUse hook. |
 
 **Config (`~/.config/caveman/config.json`):**
 ```json
-{ "defaultMode": "subagent-only", "subagentIntensity": "full" }
+{ "defaultMode": "subagent", "subagentIntensity": "full" }
 ```
 
 `subagentIntensity` accepts `lite`, `full` (default), `ultra`. Env override: `CAVEMAN_SUBAGENT_INTENSITY`.

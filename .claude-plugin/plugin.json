@@ -30,6 +30,18 @@
           }
         ]
       }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/caveman-agent-inject.js",
+            "timeout": 5,
+            "statusMessage": "Injecting caveman into agent..."
+          }
+        ]
+      }
     ]
   }
 }

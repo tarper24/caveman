@@ -4,7 +4,8 @@ description: >
   Orchestrator-side caveman mode. Write terse, fragment-style prompts when talking to
   agents via Agent tool or SendMessage. No pleasantries, no hedging, task-only.
   Applies to agent-facing outputs only — user-facing responses unaffected.
-  Auto-activates in main session when subagent-only mode is configured.
+  Auto-activates in main session when subagent mode is configured.
+  Agent and TeamCreate tool calls also get caveman boot directive injected via PreToolUse hook.
   Invoke manually with /caveman-agents for standalone use.
 user-invocable: true
 ---
