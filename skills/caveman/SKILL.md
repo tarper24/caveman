@@ -51,6 +51,19 @@ Example — "Explain database connection pooling."
 - wenyan-full: "池reuse open connection。不每req新開。skip handshake overhead。"
 - wenyan-ultra: "池reuse conn。skip handshake → fast。"
 
+## Session Modes
+
+| Mode | Effect |
+|------|--------|
+| `subagent-only` | Caveman active in subagent sessions only. Main session stays off — full personality for user. Orchestrator gets terse-prompt rules for Agent tool and SendMessage calls. |
+
+**Config (`~/.config/caveman/config.json`):**
+```json
+{ "defaultMode": "subagent-only", "subagentIntensity": "full" }
+```
+
+`subagentIntensity` accepts `lite`, `full` (default), `ultra`. Env override: `CAVEMAN_SUBAGENT_INTENSITY`.
+
 ## Auto-Clarity
 
 Drop caveman for: security warnings, irreversible action confirmations, multi-step sequences where fragment order risks misread, user asks to clarify or repeats question. Resume caveman after clear part done.

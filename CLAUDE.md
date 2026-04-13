@@ -149,7 +149,7 @@ Any error → `false` → no activation. Never false-positive.
 
 ### Subagent session behavior
 
-`isSubagent()` returns true → activate caveman at `subagentIntensity`. Statusline shows `[CAVEMAN:SUBAGENT]`. Flag file writes `subagent`.
+`isSubagent()` returns true → activate caveman at `subagentIntensity`. Statusline shows `[CAVEMAN:SUBAGENT-FULL]`, `[CAVEMAN:SUBAGENT-LITE]`, or `[CAVEMAN:SUBAGENT-ULTRA]` depending on intensity. Flag file writes `subagent-<intensity>` (e.g. `subagent-full`).
 
 ### caveman-agents skill
 
