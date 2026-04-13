@@ -16,8 +16,11 @@ const os = require('os');
 const VALID_MODES = [
   'off', 'lite', 'full', 'ultra',
   'wenyan-lite', 'wenyan', 'wenyan-full', 'wenyan-ultra',
-  'commit', 'review', 'compress'
+  'commit', 'review', 'compress',
+  'subagent-only'
 ];
+
+const VALID_INTENSITIES = ['lite', 'full', 'ultra'];
 
 function getConfigDir() {
   if (process.env.XDG_CONFIG_HOME) {
@@ -58,4 +61,20 @@ function getDefaultMode() {
   return 'full';
 }
 
-module.exports = { getDefaultMode, getConfigDir, getConfigPath, VALID_MODES };
+function getSubagentIntensity() {
+  // 1. Environment variable
+  const envVal = (process.env.CAVEMAN_SUBAGENT_INTENSITY || '').toLowerCase();
+  if (VALID_INTENSITIES.includes(envVal)) return envVal;
+
+  // 2. Config file
+  try {
+    const config = JSON.parse(fs.readFileSync(getConfigPath(), 'utf8'));
+    const cfgVal = (config.subagentIntensity || '').toLowerCase();
+    if (VALID_INTENSITIES.includes(cfgVal)) return cfgVal;
+  } catch (e) {}
+
+  // 3. Default
+  return 'full';
+}
+
+module.exports = { getDefaultMode, getSubagentIntensity, getConfigDir, getConfigPath, VALID_MODES };
