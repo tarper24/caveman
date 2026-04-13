@@ -123,6 +123,54 @@ Configured in `~/.claude/settings.json` under `statusLine.command`.
 
 ---
 
+## `subagent-only` mode (tarper24 fork feature)
+
+New config mode. Caveman active in subagent sessions only. Main session stays off — full personality preserved for user-facing conversation.
+
+**Config:**
+```json
+{ "defaultMode": "subagent-only", "subagentIntensity": "full" }
+```
+
+`subagentIntensity` accepts `lite`, `full`, `ultra`. Env override: `CAVEMAN_SUBAGENT_INTENSITY`.
+
+### Detection
+
+`caveman-activate.js` calls `isSubagent()` on SessionStart. Uses `spawnSync` (no shell) to inspect parent process name:
+- macOS/Linux: `ps -p <ppid> -o comm=`
+- Windows: `wmic process where ProcessId=<ppid> get name /value`
+
+Parent name matches `/claude/i` → subagent → activate at `subagentIntensity`.
+Any error → `false` → no activation. Never false-positive.
+
+### Main session behavior (subagent-only mode)
+
+`isSubagent()` returns false → hook does NOT activate caveman. Instead emits `caveman-agents` rules as hidden SessionStart context. Orchestrating Claude writes terse Agent tool prompts and SendMessage calls — user-facing responses unaffected.
+
+### Subagent session behavior
+
+`isSubagent()` returns true → activate caveman at `subagentIntensity`. Statusline shows `[CAVEMAN:SUBAGENT]`. Flag file writes `subagent`.
+
+### caveman-agents skill
+
+`skills/caveman-agents/SKILL.md` — orchestrator-side terse-prompt rules. Two activation paths:
+1. Auto — emitted by SessionStart hook in main session when `subagent-only` active
+2. Manual — `/caveman-agents` to activate standalone without `subagent-only` mode
+
+Rules scope: Agent tool prompts + SendMessage calls only. User-facing responses explicitly excluded.
+
+### Single source of truth
+
+| File | What it controls |
+|------|-----------------|
+| `skills/caveman-agents/SKILL.md` | Orchestrator terse-prompt rules. Hook reads at runtime. |
+| `hooks/caveman-config.js` | `subagent-only` in `VALID_MODES`, `subagentIntensity` resolver |
+| `hooks/caveman-activate.js` | `isSubagent()` detection, `subagent-only` branch |
+
+Do not duplicate rules into hook code. Hook reads SKILL.md at runtime — same pattern as existing caveman skill.
+
+---
+
 ## Skill system
 
 Skills = Markdown files with YAML frontmatter consumed by Claude Code's skill/plugin system and by `npx skills` for other agents.
