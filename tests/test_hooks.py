@@ -384,31 +384,24 @@ class HookScriptTests(unittest.TestCase):
         )
         self.assertEqual(result.stdout, "")
 
-    def test_inject_teamcreate_systemprompt(self):
-        """Inject hook fires for any agent type (TeamCreate agents included)."""
-        result = self._run_inject_hook(
-            agent_type="code-reviewer",
-            extra_env={"CAVEMAN_DEFAULT_MODE": "subagent"},
-        )
-        out = json.loads(result.stdout)
-        self.assertIn("CAVEMAN MODE", out["hookSpecificOutput"]["additionalContext"])
+    def test_inject_fires_for_all_agent_types(self):
+        """SubagentStart hook fires for all agent types — no filtering by agent_type."""
+        for agent_type in ("general-purpose", "code-reviewer", "Bash"):
+            with self.subTest(agent_type=agent_type):
+                result = self._run_inject_hook(
+                    agent_type=agent_type,
+                    extra_env={"CAVEMAN_DEFAULT_MODE": "subagent"},
+                )
+                out = json.loads(result.stdout)
+                self.assertIn("CAVEMAN MODE", out["hookSpecificOutput"]["additionalContext"])
 
     def test_inject_uses_configured_intensity(self):
-        """Boot directive includes the resolved subagentIntensity."""
+        """Injected context includes the resolved subagentIntensity."""
         result = self._run_inject_hook(
             extra_env={"CAVEMAN_DEFAULT_MODE": "subagent", "CAVEMAN_SUBAGENT_INTENSITY": "ultra"},
         )
         out = json.loads(result.stdout)
         self.assertIn("ultra", out["hookSpecificOutput"]["additionalContext"])
-
-    def test_inject_fires_for_all_agent_types(self):
-        """Inject hook fires for all agent types in subagent mode (no filtering needed)."""
-        result = self._run_inject_hook(
-            agent_type="Bash",
-            extra_env={"CAVEMAN_DEFAULT_MODE": "subagent"},
-        )
-        out = json.loads(result.stdout)
-        self.assertIn("CAVEMAN MODE", out["hookSpecificOutput"]["additionalContext"])
 
 
 if __name__ == "__main__":

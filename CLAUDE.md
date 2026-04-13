@@ -70,15 +70,17 @@ CI bot commits as `github-actions[bot]`. After PR merge, wait for workflow befor
 
 ## Hook system (Claude Code)
 
-Three hooks in `hooks/`. Communicate via flag file at `~/.claude/.caveman-active`.
+Four hooks in `hooks/`. Communicate via flag file at `~/.claude/.caveman-active`.
 
 ```
-SessionStart hook ──writes "full"──▶ ~/.claude/.caveman-active ◀──writes mode── UserPromptSubmit hook
+SessionStart hook ──writes mode──▶ ~/.claude/.caveman-active ◀──writes mode── UserPromptSubmit hook
                                                │
                                             reads
                                                ▼
                                       caveman-statusline.sh
                                      [CAVEMAN] / [CAVEMAN:ULTRA] / ...
+
+SubagentStart hook ── injects caveman ruleset ──▶ spawned subagent context
 ```
 
 ### `hooks/caveman-activate.js` — SessionStart hook
@@ -112,6 +114,16 @@ Reads flag file. Outputs colored badge string for Claude Code statusline:
 - anything else → `[CAVEMAN:<MODE_UPPERCASED>]` (orange)
 
 Configured in `~/.claude/settings.json` under `statusLine.command`.
+
+### `hooks/caveman-agent-inject.js` — SubagentStart hook
+
+Fires when any subagent is spawned (Agent tool, TeamCreate, or other subagent tools). In `subagent` mode: injects full filtered caveman ruleset into the subagent's context via `additionalContext`. All other modes: silent no-op.
+
+Complements SessionStart detection (`isSubagent()`) — if parent-process detection fails, SubagentStart still delivers the rules. Uses `buildCavemanRules(intensity)` from `caveman-config.js` (shared with `caveman-activate.js`).
+
+Silent-fails on all errors — never blocks subagent spawning.
+
+**Note:** Standalone install (`hooks/install.sh`) does not register this hook — it is plugin-only. SubagentStart hook registration requires the plugin system.
 
 ### Hook installation
 

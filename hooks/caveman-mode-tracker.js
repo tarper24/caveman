@@ -5,7 +5,7 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const { getDefaultMode } = require('./caveman-config');
+const { getDefaultMode, getSubagentIntensity } = require('./caveman-config');
 
 const flagPath = path.join(os.homedir(), '.claude', '.caveman-active');
 
@@ -36,7 +36,12 @@ process.stdin.on('end', () => {
         else if (arg === 'wenyan-lite') mode = 'wenyan-lite';
         else if (arg === 'wenyan' || arg === 'wenyan-full') mode = 'wenyan';
         else if (arg === 'wenyan-ultra') mode = 'wenyan-ultra';
-        else mode = getDefaultMode();
+        else {
+          const def = getDefaultMode();
+          // subagent is a session-level config, not a per-prompt toggle.
+          // Write subagent-<intensity> to match the flag format from caveman-activate.js.
+          mode = def === 'subagent' ? 'subagent-' + getSubagentIntensity() : def;
+        }
       }
 
       if (mode && mode !== 'off') {

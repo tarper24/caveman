@@ -77,4 +77,44 @@ function getSubagentIntensity() {
   return 'full';
 }
 
-module.exports = { getDefaultMode, getSubagentIntensity, getConfigDir, getConfigPath, VALID_MODES };
+// Shared SKILL.md filtering — used by both SessionStart and SubagentStart hooks.
+// Reads SKILL.md, strips frontmatter, filters intensity table rows and examples
+// to only the active level, returns formatted string ready for injection.
+function buildCavemanRules(intensity) {
+  const fs = require('fs');
+  const path = require('path');
+  let skillContent = '';
+  try {
+    skillContent = fs.readFileSync(
+      path.join(__dirname, '..', 'skills', 'caveman', 'SKILL.md'), 'utf8'
+    );
+  } catch (e) {}
+
+  if (skillContent) {
+    const body = skillContent.replace(/^---[\s\S]*?---\s*/, '');
+    const filtered = body.split('\n').reduce((acc, line) => {
+      const tableRowMatch = line.match(/^\|\s*\*\*(\S+?)\*\*\s*\|/);
+      if (tableRowMatch) {
+        if (tableRowMatch[1] === intensity) acc.push(line);
+        return acc;
+      }
+      const exampleMatch = line.match(/^- (\S+?):\s/);
+      if (exampleMatch) {
+        if (exampleMatch[1] === intensity) acc.push(line);
+        return acc;
+      }
+      acc.push(line);
+      return acc;
+    }, []);
+    return 'CAVEMAN MODE ACTIVE — level: ' + intensity + '\n\n' + filtered.join('\n');
+  }
+
+  // Fallback when SKILL.md not found (standalone install without skills dir)
+  return 'CAVEMAN MODE ACTIVE — level: ' + intensity + '\n\n' +
+    'Respond terse like smart caveman. All technical substance stay. Only fluff die.\n\n' +
+    'Drop: articles, filler, pleasantries, hedging. Fragments OK. Short synonyms. ' +
+    'Technical terms exact. Code blocks unchanged.\n\n' +
+    'ACTIVE EVERY RESPONSE. Off only: "stop caveman" / "normal mode".';
+}
+
+module.exports = { getDefaultMode, getSubagentIntensity, buildCavemanRules, getConfigDir, getConfigPath, VALID_MODES };

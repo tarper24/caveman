@@ -55,7 +55,7 @@ Example — "Explain database connection pooling."
 
 | Mode | Effect |
 |------|--------|
-| `subagent` | Caveman active in subagent sessions only. Main session stays off — full personality for user. Orchestrator gets terse-prompt rules for Agent tool and SendMessage calls. Agent/TeamCreate tool calls get caveman boot directive injected automatically via SubagentStart hook. |
+| `subagent` | Caveman active in subagent sessions only. Main session stays off — full personality for user. Orchestrator gets terse-prompt rules for Agent tool and SendMessage calls. All subagent spawns get caveman ruleset injected automatically via SubagentStart hook. |
 
 **Config (`~/.config/caveman/config.json`):**
 ```json

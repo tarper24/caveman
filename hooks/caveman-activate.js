@@ -10,7 +10,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { spawnSync } = require('child_process');
-const { getDefaultMode, getSubagentIntensity } = require('./caveman-config');
+const { getDefaultMode, getSubagentIntensity, buildCavemanRules } = require('./caveman-config');
 
 function isSubagent() {
   // Test seam: allows Python integration tests to exercise both branches
@@ -52,38 +52,7 @@ if (mode === 'subagent') {
       fs.writeFileSync(flagPath, 'subagent-' + intensity);
     } catch (e) {}
 
-    // Read caveman SKILL.md — same runtime-read pattern as existing logic
-    let skillContent = '';
-    try {
-      skillContent = fs.readFileSync(
-        path.join(__dirname, '..', 'skills', 'caveman', 'SKILL.md'), 'utf8'
-      );
-    } catch (e) {}
-
-    const intensityLabel = intensity;
-    let output;
-    if (skillContent) {
-      const body = skillContent.replace(/^---[\s\S]*?---\s*/, '');
-      const filtered = body.split('\n').reduce((acc, line) => {
-        const tableRowMatch = line.match(/^\|\s*\*\*(\S+?)\*\*\s*\|/);
-        if (tableRowMatch) {
-          if (tableRowMatch[1] === intensityLabel) acc.push(line);
-          return acc;
-        }
-        const exampleMatch = line.match(/^- (\S+?):\s/);
-        if (exampleMatch) {
-          if (exampleMatch[1] === intensityLabel) acc.push(line);
-          return acc;
-        }
-        acc.push(line);
-        return acc;
-      }, []);
-      output = 'CAVEMAN MODE ACTIVE — level: ' + intensityLabel + '\n\n' + filtered.join('\n');
-    } else {
-      output = 'CAVEMAN MODE ACTIVE — level: ' + intensityLabel + '\n\n' +
-        'Respond terse like smart caveman. All technical substance stay. Only fluff die.';
-    }
-    process.stdout.write(output);
+    process.stdout.write(buildCavemanRules(intensity));
     process.exit(0);
   } else {
     // ── Main session: emit caveman-agents rules as hidden context ──

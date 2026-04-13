@@ -1,40 +1,17 @@
 #!/usr/bin/env node
-// caveman — SubagentStart hook for Agent/TeamCreate context injection
+// caveman — SubagentStart hook for subagent context injection
 //
-// Fires when a subagent is spawned via Agent or TeamCreate tool.
-// In subagent mode: injects full caveman SKILL.md into the subagent's context.
-// All other modes: silent no-op (exit 0, no stdout).
+// Fires when a subagent is spawned via Agent, TeamCreate, or any other
+// subagent tool. In subagent mode: injects full filtered caveman ruleset
+// into the subagent's context. All other modes: silent no-op (exit 0, no stdout).
 // Never exits non-zero — must never block subagent spawning.
 //
-// Injects full SKILL.md rather than a short directive because isSubagent()
-// in caveman-activate.js may not reliably detect Agent-spawned subagents
-// (parent process name depends on how Claude Code runs). Full rules here
-// ensure correct behavior regardless of SessionStart detection.
+// Injects rules via SubagentStart rather than relying solely on SessionStart
+// because isSubagent() in caveman-activate.js may not reliably detect
+// Agent-spawned subagents (parent process name depends on how Claude Code runs).
+// SubagentStart ensures correct behavior regardless of SessionStart detection.
 
-const fs = require('fs');
-const path = require('path');
-const { getDefaultMode, getSubagentIntensity } = require('./caveman-config');
-
-function buildDirective(intensity) {
-  let skillContent = '';
-  try {
-    skillContent = fs.readFileSync(
-      path.join(__dirname, '..', 'skills', 'caveman', 'SKILL.md'), 'utf8'
-    );
-  } catch (e) {}
-
-  if (skillContent) {
-    // Strip YAML frontmatter, inject full rules — no intensity filtering
-    const body = skillContent.replace(/^---[\s\S]*?---\s*/, '');
-    return 'CAVEMAN MODE ACTIVE — level: ' + intensity + '\n\n' + body;
-  }
-
-  return `CAVEMAN MODE ACTIVE — level: ${intensity}\n\n` +
-    'Respond terse like smart caveman. All technical substance stay. Only fluff die.\n\n' +
-    'Drop: articles, filler, pleasantries, hedging. Fragments OK. Short synonyms. ' +
-    'Technical terms exact. Code blocks unchanged.\n\n' +
-    'ACTIVE EVERY RESPONSE. Off only: "stop caveman" / "normal mode".';
-}
+const { getDefaultMode, getSubagentIntensity, buildCavemanRules } = require('./caveman-config');
 
 let stdinData = '';
 process.stdin.setEncoding('utf8');
@@ -50,12 +27,11 @@ process.stdin.on('end', () => {
     }
 
     const intensity = getSubagentIntensity();
-    const directive = buildDirective(intensity);
 
     process.stdout.write(JSON.stringify({
       hookSpecificOutput: {
         hookEventName: 'SubagentStart',
-        additionalContext: directive,
+        additionalContext: buildCavemanRules(intensity),
       },
     }));
     process.exit(0);
