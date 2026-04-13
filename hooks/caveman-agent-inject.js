@@ -18,10 +18,7 @@ process.stdin.setEncoding('utf8');
 process.stdin.on('data', chunk => { stdinData += chunk; });
 process.stdin.on('end', () => {
   try {
-    // stdin carries SubagentStart metadata (agent_id, agent_type, etc.)
-    // not needed for mode-based decision — consumed to satisfy protocol
-    JSON.parse(stdinData);
-
+    // SubagentStart metadata on stdin is not needed for mode-based injection
     if (getDefaultMode() !== 'subagent') {
       process.exit(0);
     }
