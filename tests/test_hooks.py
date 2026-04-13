@@ -346,6 +346,78 @@ class HookScriptTests(unittest.TestCase):
             flag = home / ".claude" / ".caveman-active"
             self.assertEqual(flag.read_text(), "subagent-ultra")
 
+    def _run_inject_hook(self, tool_name, tool_input, extra_env=None):
+        """Helper: run caveman-agent-inject.js with given tool call JSON on stdin."""
+        env = os.environ.copy()
+        if extra_env:
+            env.update(extra_env)
+        stdin_data = json.dumps({"tool_name": tool_name, "tool_input": tool_input})
+        return subprocess.run(
+            ["node", "hooks/caveman-agent-inject.js"],
+            cwd=REPO_ROOT,
+            env=env,
+            input=stdin_data,
+            text=True,
+            capture_output=True,
+            check=True,
+        )
+
+    def test_inject_agent_prompt_in_subagent_mode(self):
+        """Inject hook prepends caveman directive to Agent tool prompt."""
+        result = self._run_inject_hook(
+            "Agent",
+            {"prompt": "Do the thing.", "description": "test agent"},
+            extra_env={"CAVEMAN_DEFAULT_MODE": "subagent"},
+        )
+        out = json.loads(result.stdout)
+        self.assertEqual(out["decision"], "modify")
+        self.assertIn("CAVEMAN MODE", out["parameters"]["prompt"])
+        self.assertIn("Do the thing.", out["parameters"]["prompt"])
+        self.assertLess(
+            out["parameters"]["prompt"].index("CAVEMAN MODE"),
+            out["parameters"]["prompt"].index("Do the thing."),
+        )
+
+    def test_inject_noop_for_non_subagent_mode(self):
+        """Inject hook is silent when mode is not subagent."""
+        result = self._run_inject_hook(
+            "Agent",
+            {"prompt": "Do the thing."},
+            extra_env={"CAVEMAN_DEFAULT_MODE": "full"},
+        )
+        self.assertEqual(result.stdout, "")
+
+    def test_inject_teamcreate_systemprompt(self):
+        """Inject hook prepends directive to TeamCreate systemPrompt."""
+        result = self._run_inject_hook(
+            "TeamCreate",
+            {"systemPrompt": "You are an expert.", "name": "myteam"},
+            extra_env={"CAVEMAN_DEFAULT_MODE": "subagent"},
+        )
+        out = json.loads(result.stdout)
+        self.assertEqual(out["decision"], "modify")
+        self.assertIn("CAVEMAN MODE", out["parameters"]["systemPrompt"])
+        self.assertIn("You are an expert.", out["parameters"]["systemPrompt"])
+
+    def test_inject_uses_configured_intensity(self):
+        """Boot directive includes the resolved subagentIntensity."""
+        result = self._run_inject_hook(
+            "Agent",
+            {"prompt": "Do the thing."},
+            extra_env={"CAVEMAN_DEFAULT_MODE": "subagent", "CAVEMAN_SUBAGENT_INTENSITY": "ultra"},
+        )
+        out = json.loads(result.stdout)
+        self.assertIn("ultra", out["parameters"]["prompt"])
+
+    def test_inject_noop_for_unknown_tool(self):
+        """Inject hook is silent for tools other than Agent and TeamCreate."""
+        result = self._run_inject_hook(
+            "Bash",
+            {"command": "ls"},
+            extra_env={"CAVEMAN_DEFAULT_MODE": "subagent"},
+        )
+        self.assertEqual(result.stdout, "")
+
 
 if __name__ == "__main__":
     unittest.main()
